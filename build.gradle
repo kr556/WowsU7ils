@@ -1,0 +1,71 @@
+import java.nio.file.Files
+
+plugins {
+    id 'java'
+}
+
+group = 'org.w7ls'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+tasks.register("compileCuda") {
+    String binDir = "bin/cuda"
+    String srcDir = "src/main/cuda/org/w7ls"
+    file(binDir).mkdirs()
+
+    doFirst {
+        for (name in fileTree(srcDir).include("*.cu")) {
+            var fl = file(name)
+            name = fl.toPath().fileName.toString().replace(".cu", "")
+            if (Files.exists(file("${binDir}/${name}.ptx").toPath())) continue
+            println "compile : \"${srcDir}/${name}.cu\" to \"${binDir}/${name}.ptx\""
+            exec {
+                commandLine "nvcc", "-ptx", "${srcDir}/${name}.cu", "-o", "${binDir}/${name}.ptx"
+            }
+        }
+    }
+}
+
+//tasks.register("compileNative", Exec) {
+//    def javaHome = System.getProperty("java.home")
+//    doFirst {
+//        file("libs").mkdirs()
+//    }
+//    commandLine "nvcc", "-shared",
+//            "-o", "libs/native_cuda.dll",
+//            "src/main/cpp/org/w7ls/w7ls_natives.cu",
+//            "-I${javaHome}/include",
+//            "-I${javaHome}/include/win32",
+//            "-Xcompiler", "/MD /LD"
+//}
+//
+//tasks.register("generateJniHeader", Exec) {
+//    dependsOn "compileJava"
+//    commandLine "javac", "-h", "src/main/cpp",
+//            "src/test/java/org/w7ls/JNICudaTest.java"
+//}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.9.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.21.1'
+    implementation 'com.atilika.kuromoji:kuromoji-ipadic:0.9.0'
+    implementation 'org.jetbrains:annotations:24.0.0'
+    implementation 'org.nd4j:nd4j-api:1.0.0-M2.1'
+    implementation 'org.nd4j:nd4j-native:1.0.0-M2.1'
+    implementation 'org.nd4j:nd4j-cuda-11.6:1.0.0-M2.1'
+
+    implementation fileTree(dir: "libs", includes: ["*.jar"])
+}
+
+
+
+compileJava.dependsOn compileCuda
+
+test {
+    jvmArgs = ["-Djava.library.path=${projectDir}/libs"]
+    useJUnitPlatform()
+}

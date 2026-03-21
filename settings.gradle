@@ -1,0 +1,8 @@
+rootProject.name = 'WowsU7ils'
+
+file('results').mkdirs()
+gradle.beforeProject {
+    if (it.projectDir == file('results')) {
+        throw new StopExecutionException()
+    }
+}
