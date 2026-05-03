@@ -2,7 +2,8 @@ package org.w7ls.utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
-import org.w7ls.main.io.RequestQueries;
+import org.w7ls.common.io.RequestQueries;
+import org.w7ls.common.utils.ShipJsonEncyclopedia;
 
 class ShipJsonEncyclopediaTest {
     @Test

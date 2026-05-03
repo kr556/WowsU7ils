@@ -1,28 +1,30 @@
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.w7ls.main.Checkers;
-import org.w7ls.main.weapon.*;
-import org.w7ls.utils.MinMax;
-import org.w7ls.utils.MinMidMax;
-import org.w7ls.utils.StringTmp;
+import org.w7ls.common.Checkers;
+import org.w7ls.common.weapon.*;
+import org.w7ls.common.utils.MinMax;
+import org.w7ls.common.utils.MinMidMax;
+import org.w7ls.common.utils.StringTmp;
+import org.w7ls.vme.VMAudioFile;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
 import java.util.*;
 
-import static org.w7ls.main.weapon.Consumable.Name.ENGINE_COOLING;
-import static org.w7ls.main.weapon.Shell.ShellType.*;
-import static org.w7ls.utils.StringTmp.str;
+import static org.w7ls.common.weapon.Consumable.Name.ENGINE_COOLING;
+import static org.w7ls.common.utils.StringTmp.str;
+import static org.w7ls.common.weapon.Shell.ShellType.*;
 
-public class Test {
+public class  Test {
     private static HashMap<String, AirPlanes> airplanesMap; // key...<enName>_<weaponName>_<N>
 
     public static void main(String[] args) throws IOException {
-        initAirplanes();
+        VMAudioFile audioFile = new VMAudioFile(new File("C:/Games/wows_my_mod_installer/Genshin_voiceDownLoader/voices/kinich_voices/1204_jp.ogg"));
+        audioFile.trim(5, 10);
+        audioFile.startTrimed();
 
-        printToFile("results/Test.csv", getCSV(30, 0.1, (s, a) -> (a.weapon() instanceof HEBomb || a.weapon() instanceof APBomb) && !a.isTactical()));
+//        initAirplanes();
+//
+//        printToFile("results/Test.csv", getCSV(30, 0.1, (s, a) -> (a.weapon() instanceof HEBomb || a.weapon() instanceof APBomb) && !a.isTactical()));
     }
 
     // 敵艦までの距離，微小距離，計算する航空機の条件

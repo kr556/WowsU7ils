@@ -1,3 +1,11 @@
+pluginManagement {
+    plugins {
+        id 'org.jetbrains.kotlin.jvm' version '1.9.21'
+    }
+}
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.5.0'
+}
 rootProject.name = 'WowsU7ils'
 
 file('results').mkdirs()
@@ -6,3 +14,5 @@ gradle.beforeProject {
         throw new StopExecutionException()
     }
 }
+include 'vmeditor'
+

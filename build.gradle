@@ -1,3 +1,8 @@
+import javax.annotation.processing.AbstractProcessor
+import javax.annotation.processing.RoundEnvironment
+import javax.annotation.processing.SupportedAnnotationTypes
+import javax.lang.model.element.Element
+import javax.lang.model.element.TypeElement
 import java.nio.file.Files
 
 plugins {
@@ -11,9 +16,32 @@ repositories {
     mavenCentral()
 }
 
+sourceSets {
+    annotation {
+        java.srcDir("src/annotation/java")
+    }
+
+    processor {
+        java.srcDir("src/processor/java")
+    }
+
+    main {
+        java.srcDir("src/main/java")
+    }
+
+    chart {
+        java.srcDir("src/chart/java")
+    }
+
+    vmeditor {
+        java.srcDir("src/vmeditor/kotlin")
+    }
+}
+
+
 tasks.register("compileCuda") {
     String binDir = "bin/cuda"
-    String srcDir = "src/main/cuda/org/w7ls"
+    String srcDir = "src/main/cuda/org/w7ls/common"
     file(binDir).mkdirs()
 
     doFirst {
@@ -23,46 +51,66 @@ tasks.register("compileCuda") {
             if (Files.exists(file("${binDir}/${name}.ptx").toPath())) continue
             println "compile : \"${srcDir}/${name}.cu\" to \"${binDir}/${name}.ptx\""
             exec {
-                commandLine "nvcc", "-ptx", "${srcDir}/${name}.cu", "-o", "${binDir}/${name}.ptx"
+                commandLine "nvcc", "-ptx",  "--keep-device-functions", "${srcDir}/${name}.cu", "-o", "${binDir}/${name}.ptx"
             }
         }
     }
 }
 
-//tasks.register("compileNative", Exec) {
-//    def javaHome = System.getProperty("java.home")
-//    doFirst {
-//        file("libs").mkdirs()
-//    }
-//    commandLine "nvcc", "-shared",
-//            "-o", "libs/native_cuda.dll",
-//            "src/main/cpp/org/w7ls/w7ls_natives.cu",
-//            "-I${javaHome}/include",
-//            "-I${javaHome}/include/win32",
-//            "-Xcompiler", "/MD /LD"
-//}
-//
-//tasks.register("generateJniHeader", Exec) {
-//    dependsOn "compileJava"
-//    commandLine "javac", "-h", "src/main/cpp",
-//            "src/test/java/org/w7ls/JNICudaTest.java"
-//}
+tasks.register("mkcu") {
+
+}
 
 dependencies {
-    testImplementation platform('org.junit:junit-bom:5.9.1')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.21.1'
     implementation 'com.atilika.kuromoji:kuromoji-ipadic:0.9.0'
     implementation 'org.jetbrains:annotations:24.0.0'
-    implementation 'org.nd4j:nd4j-api:1.0.0-M2.1'
     implementation 'org.nd4j:nd4j-native:1.0.0-M2.1'
     implementation 'org.nd4j:nd4j-cuda-11.6:1.0.0-M2.1'
-
+    implementation 'org.jetbrains:annotations:24.0.0'
+    implementation 'net.bytebuddy:byte-buddy:1.14.9'
     implementation fileTree(dir: "libs", includes: ["*.jar"])
+    implementation fileTree(dir: "libs/lwjgl-release-3.4.1-custom", includes: ["*.jar"])
+
+    // annotation impl
+    annotationImplementation 'org.jetbrains:annotations:24.0.0'
+
+    // processor impl
+    processorImplementation 'org.jetbrains:annotations:24.0.0'
+    processorImplementation sourceSets.annotation.output
+
+    // impl the annotation project
+    implementation sourceSets.annotation.output
+
+    annotationProcessor sourceSets.processor.output
+    annotationProcessor sourceSets.annotation.output
+    annotationProcessor 'org.jetbrains:annotations:24.0.0'
+
+    // chart impl
+    chartImplementation fileTree(dir: "libs", includes: ["*.jar"])
+    chartImplementation fileTree(dir: "libs/lwjgl-release-3.4.1-custom", includes: ["*.jar"])
+    chartImplementation sourceSets.annotation.output
+    chartImplementation sourceSets.main.output
+
+    vmeditorImplementation 'org.jetbrains:annotations:24.0.0'
+    vmeditorImplementation 'com.formdev:flatlaf:3.4'
+    vmeditorImplementation 'com.googlecode.soundlibs:jorbis:0.0.17.4'
+    vmeditorImplementation 'com.googlecode.soundlibs:tritonus-share:0.3.7.4'
+    vmeditorImplementation 'com.googlecode.soundlibs:vorbisspi:1.0.3.3'
+    vmeditorImplementation 'com.googlecode.soundlibs:mp3spi:1.9.5.4'
+
+    testImplementation platform('org.junit:junit-bom:5.9.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation sourceSets.chart.output
+    testImplementation sourceSets.vmeditor.output
+    testImplementation 'com.googlecode.soundlibs:jorbis:0.0.17.4'
+    testImplementation 'com.googlecode.soundlibs:tritonus-share:0.3.7.4'
+    testImplementation 'com.googlecode.soundlibs:vorbisspi:1.0.3.3'
+    testImplementation 'com.googlecode.soundlibs:mp3spi:1.9.5.4'
 }
 
-
-
+compileProcessorJava.dependsOn compileAnnotationJava
+compileJava.dependsOn compileProcessorJava
 compileJava.dependsOn compileCuda
 
 test {

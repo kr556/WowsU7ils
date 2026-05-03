@@ -1,3 +1,0 @@
-C:/.program/java/WowsU7ils/src/main/cuda/org/w7ls/cmake-build-debug/CMakeFiles/w7ls.dir
-C:/.program/java/WowsU7ils/src/main/cuda/org/w7ls/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/.program/java/WowsU7ils/src/main/cuda/org/w7ls/cmake-build-debug/CMakeFiles/rebuild_cache.dir
