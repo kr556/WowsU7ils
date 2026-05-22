@@ -1,4 +1,4 @@
-package org.w7ls.vme;
+package org.w7ls.vmeditor;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -37,8 +37,7 @@ public class AudioEditorPanel extends JPanel {
         playButton.setEnabled(true);
         playButton.addActionListener(e -> togglePlay());
 
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        topPanel.add(playButton);
+        add(playButton);
 
         // タイムライン
         timeline = new TimelinePanel();
@@ -52,15 +51,16 @@ public class AudioEditorPanel extends JPanel {
     }
 
     // ファイルをセットして表示を更新
-    public void setAudioFile(VMAudioFile audioFile) {
+    // nullの場合は，選択してないことを表す
+    public void setAudioFile(@Nullable VMAudioFile audioFile) {
         this.audioFile = audioFile;
-        paintComponent(getGraphics());
-        paint(getGraphics());
-        this.timeline.update();
-        this.timeline.paintComponent(timeline.getGraphics());
 
-        cardLayout.show(cards, EDITOR);
-        timeline.update();
+        if (this.audioFile != null) {
+            this.timeline.update();
+            this.timeline.paintComponent(timeline.getGraphics());
+            cardLayout.show(cards, EDITOR);
+        } else
+            cardLayout.show(cards, EMPTY);
     }
 
     // 再生開始
@@ -95,6 +95,7 @@ public class AudioEditorPanel extends JPanel {
 
         private TrimPosLabel minCircle;
         private TrimPosLabel maxCircle;
+        private SliderLabel slider;
         private int tipBorder; // パネルの両端から，再生ラインまでの距離
         private int lineHeight; // 再生ライン中央の高さ
         private double position; // 0 ~ 1
@@ -109,6 +110,10 @@ public class AudioEditorPanel extends JPanel {
 
             minCircle = new TrimPosLabel(6);
             maxCircle = new TrimPosLabel(6);
+            slider = new SliderLabel(10);
+
+            minCircle.start = true;
+            maxCircle.start = false;
 
             setLocation(0, 0);
             setPreferredSize(new Dimension(getWidth(), 150));
@@ -116,6 +121,7 @@ public class AudioEditorPanel extends JPanel {
 
             add(minCircle);
             add(maxCircle);
+            add(slider);
             addComponentListener(new ComponentAdapter() {
                 @Override
                 public void componentResized(ComponentEvent e) {
@@ -170,20 +176,27 @@ public class AudioEditorPanel extends JPanel {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                     RenderingHints.VALUE_ANTIALIAS_ON);
 
-            // 再生線
-            g2.setColor(Color.WHITE);
-            g2.drawLine(tipBorder, lineHeight, getWidth() - tipBorder, lineHeight);
+            if (audioFile != null) {
+                // 再生線
+                int tipHeight = 10;
+                g2.setColor(Color.WHITE);
+                g2.drawLine(tipBorder, lineHeight, getWidth() - tipBorder, lineHeight);
+                // 両端の縦線
+                g2.drawLine(tipBorder, lineHeight + tipHeight, tipBorder, lineHeight - tipHeight);
+                g2.drawLine(tipBorder + lineWidth, lineHeight + tipHeight, tipBorder + lineWidth, lineHeight - tipHeight);
 
-            // トリミング範囲
-            int startX = minCircle.getX() + minCircle.r;
-            int endX   = maxCircle.getX() + maxCircle.r;
-            g2.setColor(new Color(trimColor.getRed(), trimColor.getGreen(), trimColor.getBlue(), 40));
-            g2.fillRect(startX, lineHeight, endX - startX, trimRectHeight);
+                // トリミング範囲
+                int startX = minCircle.getX() + minCircle.r;
+                int endX = maxCircle.getX() + maxCircle.r;
+                g2.setColor(new Color(trimColor.getRed(), trimColor.getGreen(), trimColor.getBlue(), 40));
+                g2.fillRect(startX, lineHeight, endX - startX, trimRectHeight);
 
-            // ファイル名
-            if (audioFile != null)  {
-                g2.setFont(getFont());
-                g2.drawString(audioFile.audioName, tipBorder, lineHeight - 30);
+                // ファイル名
+                if (audioFile != null) {
+                    g2.setColor(Color.WHITE);
+                    g2.setFont(getFont());
+                    g2.drawString(audioFile.audioName, tipBorder, lineHeight - 30);
+                }
             }
         }
 
@@ -191,12 +204,59 @@ public class AudioEditorPanel extends JPanel {
             return getWidth() - 2 * tipBorder;
         }
 
-        private class TrimPosLabel extends JLabel {
+        private class SliderLabel extends JLabel {
             private final int r;
-            private int dragOffsetX = 0;
             private int startX = 0;
             private int currentX = 0;
-            private int pos;
+
+            SliderLabel(int r_) {
+                r = r_;
+                setSize(r * 2, trimRectHeight + r * 2);
+
+                MouseAdapter ma = new MouseAdapter() {
+                    public void mousePressed(MouseEvent e) {
+                        currentX = getX() + r;
+                        startX = e.getXOnScreen() - currentX;
+                    }
+
+                    @Override
+                    public void mouseDragged(MouseEvent e) {
+                        currentX = e.getXOnScreen() - startX;
+                        currentX = Math.max(tipBorder, Math.min(currentX, getParent().getWidth() - tipBorder));
+
+                        setLocation(currentX - r, getY());
+
+                        getParent().repaint();
+                        audioFile.position = (double) (currentX - tipBorder) / (AudioEditorPanel.this.getWidth() - tipBorder * 2) * audioFile.duration;
+                    }
+                };
+
+                setLocation(tipBorder - r, lineHeight - r);
+
+                addMouseListener(ma);
+                addMouseMotionListener(ma);
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(Color.WHITE);
+                Polygon pol = new Polygon();
+                pol.addPoint(0, 0);
+                pol.addPoint(r * 2, 0);
+                pol.addPoint(r, r);
+                g2.fill(pol);
+            }
+        }
+
+        private class TrimPosLabel extends JLabel {
+            private final int r;
+            private int startX = 0;
+            private int currentX = 0;
+            private boolean start;
 
             TrimPosLabel(int r_) {
                 r = r_;
@@ -219,15 +279,15 @@ public class AudioEditorPanel extends JPanel {
                         }
                         setLocation(currentX - r, getY());
 
-                        if (audioFile != null) {
-                            double ratio = (double)(currentX - tipBorder) / getLineWidth();
-                            if (TrimPosLabel.this == minCircle) {
-                                audioFile.trimStart = ratio * audioFile.duration;
-                            } else {
-                                audioFile.trimEnd = ratio * audioFile.duration;
-                            }
-                        }
                         getParent().repaint();
+                        if (start)
+                            audioFile.trim(
+                                    (double) (currentX - tipBorder) / (AudioEditorPanel.this.getWidth() - tipBorder * 2) * audioFile.duration,
+                                    audioFile.trimEnd * audioFile.duration);
+                        else
+                            audioFile.trim(
+                                    audioFile.trimStart * audioFile.duration,
+                                    (double) (currentX - tipBorder) / (AudioEditorPanel.this.getWidth() - tipBorder * 2) * audioFile.duration);
                     }
                 };
 

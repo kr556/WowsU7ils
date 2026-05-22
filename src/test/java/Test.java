@@ -5,7 +5,7 @@ import org.w7ls.common.weapon.*;
 import org.w7ls.common.utils.MinMax;
 import org.w7ls.common.utils.MinMidMax;
 import org.w7ls.common.utils.StringTmp;
-import org.w7ls.vme.VMAudioFile;
+import org.w7ls.vmeditor.*;
 
 import java.io.*;
 import java.util.*;
@@ -13,18 +13,47 @@ import java.util.*;
 import static org.w7ls.common.weapon.Consumable.Name.ENGINE_COOLING;
 import static org.w7ls.common.utils.StringTmp.str;
 import static org.w7ls.common.weapon.Shell.ShellType.*;
+import static org.w7ls.vmeditor.WinMain.pathDefaultXml;
 
 public class  Test {
     private static HashMap<String, AirPlanes> airplanesMap; // key...<enName>_<weaponName>_<N>
 
-    public static void main(String[] args) throws IOException {
-        VMAudioFile audioFile = new VMAudioFile(new File("C:/Games/wows_my_mod_installer/Genshin_voiceDownLoader/voices/kinich_voices/1204_jp.ogg"));
-        audioFile.trim(5, 10);
-        audioFile.startTrimed();
+    public static void main(String[] args) throws Exception {
+        AudioModification audioModification = new AudioModification();
+        audioModification.load(new File(pathDefaultXml));
 
-//        initAirplanes();
-//
-//        printToFile("results/Test.csv", getCSV(30, 0.1, (s, a) -> (a.weapon() instanceof HEBomb || a.weapon() instanceof APBomb) && !a.isTactical()));
+        Project prj = new Project();
+        prj.projectName = "アナル";
+        prj.events = audioModification.getEvents().toArray(new AudioModification.ExternalEvent[0]);
+
+        File prjf = new File("アナル.vmprj");
+
+        audioModification.getEvents().get(3).audios.addAll(
+                Arrays.stream(new File[]{new File("C:/Games/wows_my_mod_installer/Genshin_voiceDownLoader/voices/kinich_voices/1003_jp.ogg"),
+                                new File("C:/Games/wows_my_mod_installer/Genshin_voiceDownLoader/voices/kinich_voices/105_jp.ogg"),
+                                new File("C:/Games/wows_my_mod_installer/Genshin_voiceDownLoader/voices/kinich_voices/1001_jp.ogg"),
+                                new File("C:/Games/wows_my_mod_installer/Genshin_voiceDownLoader/voices/kinich_voices/1002_jp.ogg")})
+                        .map(f -> new VMAudioFile(f, e -> {throw new RuntimeException(e);}))
+                        .toList()
+        );
+
+        System.out.println(prj.projectName);
+        audioModification.getEvents().forEach(e -> {
+            System.out.println(e.shortName + " : " + e.audios);
+        });
+
+        ProjectWriter prw = new ProjectWriter(prjf);
+        prw.write(prj);
+
+        ProjectReader prr = new ProjectReader(prjf);
+        audioModification = prr.getAudioModification();
+
+        audioModification.getEvents().forEach(e -> {
+            System.out.println(e.shortName + " : " + e.audios);
+        });
+
+        prw.close();
+        prr.close();
     }
 
     // 敵艦までの距離，微小距離，計算する航空機の条件

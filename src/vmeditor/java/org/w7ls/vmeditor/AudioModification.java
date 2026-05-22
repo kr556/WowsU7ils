@@ -1,38 +1,55 @@
-package org.w7ls.vme;
+package org.w7ls.vmeditor;
 
-import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.*;
+import org.w7ls.vmeditor.VMAudioFile;
+import org.xml.sax.InputSource;
+
 import javax.xml.parsers.*;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
+import java.io.Serial;
+import java.io.Serializable;
+import java.io.StringReader;
 import java.util.*;
 
 public class AudioModification {
 
     // ExternalEventを表すデータクラス
-    public static class ExternalEvent {
-        public String name;
-        public String externalId;
-        public String shortName;
-        public List<Path> paths = new ArrayList<>();
-        public List<VMAudioFile> audios = new ArrayList<>();
-        public Set<String> linkedFiles = new HashSet<>();
+    public static class ExternalEvent implements Serializable{
+        @Serial
+        private static final long serialVersionUID = -3174827957348456444L;
+
+        public final String name;
+        public final String externalId;
+        public final String shortName;
+        public final List<VMAudioFile> audios = new ArrayList<>();
 
         public ExternalEvent(String name, String externalId) {
             this.name = name;
             this.externalId = externalId;
             this.shortName = name.replaceFirst("^Play_VO_", "");
         }
+
+        @Override
+        public String toString() {
+            return shortName;
+        }
     }
 
-    public static class Path {
+    public static class Path implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 792867465506371119L;
+
         public List<State> states = new ArrayList<>();
         public List<String> files = new ArrayList<>();
     }
 
-    public static class State {
+    public static class State implements Serializable {
+        @Serial
+        private static final long serialVersionUID = -4957577501654186119L;
+
         public String name;
         public String value;
 
@@ -44,10 +61,10 @@ public class AudioModification {
 
     // ── フィールド ────────────────────────────
 
-    private File file;
-    private Document document;
-    private String modName;
-    private List<ExternalEvent> events = new ArrayList<>();
+    File file;
+    Document document;
+    String modName;
+    List<ExternalEvent> events = new ArrayList<>();
 
     // ── 読み込み ──────────────────────────────
 
@@ -102,8 +119,6 @@ public class AudioModification {
                     Element fileEl = (Element) fileNodes.item(k);
                     path.files.add(getChildText(fileEl, "Name"));
                 }
-
-                event.paths.add(path);
             }
 
             events.add(event);
@@ -160,5 +175,17 @@ public class AudioModification {
 
     public void removeEvent(int index) {
         events.remove(index);
+    }
+
+    public void setFile(File file) {
+        this.file = file;
+    }
+
+    public void loadFromString(String xmlContent) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        document = builder.parse(new InputSource(new StringReader(xmlContent)));
+        document.getDocumentElement().normalize();
+        parse();
     }
 }

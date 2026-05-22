@@ -61,6 +61,62 @@ tasks.register("mkcu") {
 
 }
 
+// claude生成品
+tasks.register('vmeditorJar', Jar) {
+    group = 'build'
+    description = 'vmeditorのfat jarを作成'
+    archiveBaseName = 'vmeditor'
+    archiveVersion = '1.0'
+    archiveClassifier = ''
+
+    archiveBaseName = 'vmeditor'
+
+    manifest {
+        attributes 'Main-Class': 'org.w7ls.vmeditor.WinMain'
+    }
+
+    from sourceSets.vmeditor.output
+
+    // vmeditorの依存関係を全部含める
+    from {
+        configurations.vmeditorRuntimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.register('vmeditorPackage', Exec) {
+    dependsOn 'vmeditorJar'
+
+    doFirst {
+        // 既存フォルダを削除
+        delete "${projectDir}/build/package/VMEditor"
+    }
+
+    commandLine 'jpackage',
+            '--input', "${projectDir}/build/libs",
+            '--dest', "${projectDir}/build/package",
+            '--name', 'VMEditor',
+            '--main-jar', 'vmeditor-1.0.jar',
+            '--main-class', 'org.w7ls.vmeditor.WinMain',
+            '--java-options', '-Xmx256m',
+            '--java-options', '-Dfile.encoding=UTF-8',
+            '--app-version', '0.1.0',
+            '--type', 'app-image',  // WiX不要
+            '--win-console'
+
+    copy {
+        from "${projectDir}/vmod"
+        into "${projectDir}/build/package/VMEditor/vmod"
+    }
+    copy {
+        from "${projectDir}/setting.properties"
+        into "${projectDir}/build/package/VMEditor"
+    }
+}
+
 dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.21.1'
     implementation 'com.atilika.kuromoji:kuromoji-ipadic:0.9.0'
@@ -97,7 +153,9 @@ dependencies {
     vmeditorImplementation 'com.googlecode.soundlibs:jorbis:0.0.17.4'
     vmeditorImplementation 'com.googlecode.soundlibs:tritonus-share:0.3.7.4'
     vmeditorImplementation 'com.googlecode.soundlibs:vorbisspi:1.0.3.3'
-    vmeditorImplementation 'com.googlecode.soundlibs:mp3spi:1.9.5.4'
+    vmeditorImplementation 'com.fasterxml.jackson.core:jackson-annotations:2.21'
+    vmeditorImplementation 'com.fasterxml.jackson.core:jackson-core:2.21.1'
+    vmeditorImplementation 'com.fasterxml.jackson.core:jackson-databind:2.21.1'
 
     testImplementation platform('org.junit:junit-bom:5.9.1')
     testImplementation 'org.junit.jupiter:junit-jupiter'
